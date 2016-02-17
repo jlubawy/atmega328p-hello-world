@@ -7,7 +7,7 @@ RM = rm -rf
 MKDIR = mkdir -p $@
 
 MMCU ?= atmega328p
-COM_PORT ?= COM10
+COM_PORT ?= COM3
 
 DEFINES  = -DF_CPU=16000000L
 DEFINES += -DARDUINO=10603

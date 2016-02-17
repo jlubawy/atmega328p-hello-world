@@ -21,10 +21,11 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 static FILE g_uart_stream = {0};
+
+static char line[256];
 
 static void
 uart_init( uint32_t baud )
@@ -63,26 +64,10 @@ uart_putc( char c, FILE* stream )
 }
 
 
-static void
-println( const char* str )
-{
-    size_t i;
-    size_t len = strlen( str );
-
-    for ( i = 0; i < len; i++ )
-    {
-        putchar( str[i] );
-    }
-
-    putchar( '\r' );
-    putchar( '\n' );
-}
-
-
 int
 main( void )
 {
-    char c;
+    DDRB |= _BV(5);
 
     uart_init( 9600 );
     fdev_setup_stream( &g_uart_stream, uart_putc, uart_getc, _FDEV_SETUP_RW );
@@ -93,9 +78,53 @@ main( void )
 
     for (;;)
     {
-        c = getchar();
-        putchar(c);
+        int i;
+        int c;
+        int empty;
+
+        /* Read in a line from stdin */
+        i = 0;
+        empty = 1;
+        while( i < sizeof(line) - 1 )
+        {
+            c = getchar();
+
+            /* Look for EOT (CTRL-D) char */
+            if ( c == 4 ) {
+                goto EXIT;
+            }
+
+            line[i++] = (char)c;
+
+            if ( (char)c == '\n' ) {
+                break;
+            } else if ( (char)c == '\r' ) {
+                continue; /* ignore carriage returns */
+            }
+
+            empty = 0;
+        }
+        line[i++] = '\0';
+
+        /* Skip empty lines */
+        if ( empty ) {
+            putchar( '\n' );
+            continue;
+        }
+
+        size_t len = strlen( line );
+        for ( i = 0; i < len; i++ )
+        {
+            if ( line[i] == 'E' || line[i] == 'e' ) {
+                line[i] = '3';
+            }
+        }
+
+        /* Send the entire line over UART */
+        fputs( line, stdout );
+        fflush( stdout );
     }
 
+EXIT:
     return 0;
 }
